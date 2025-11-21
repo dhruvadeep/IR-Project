@@ -10,10 +10,10 @@ from src.search import search_bm25
 from src.semantic.semantic_search import semantic_search
 from src.semantic.similarity import similar_articles
 from src.semantic.timeline import build_story_timeline
-
+from src.rag.rag_pipeline import RAGPipeline
 
 app = FastAPI(title="News Search Engine")
-
+rag = RAGPipeline()
 
 # Initialize on startup
 @app.on_event("startup")
@@ -64,3 +64,12 @@ async def timeline_route(doc_id: int, top_k: int = 8):
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/rag/search")
+def rag_search(query: str, top_k: int = 5):
+    """
+    RAG-powered search:
+    Semantic retrieval + Gemini summarization
+    """
+    return rag.run(query, top_k)
