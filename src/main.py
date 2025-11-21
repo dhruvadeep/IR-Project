@@ -2,6 +2,7 @@ import os
 from typing import Dict, List
 
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from src.data_loader import load_and_clean
@@ -17,6 +18,15 @@ from src.seo import analyze_seo
 
 app = FastAPI(title="News Search Engine")
 rag = RAGPipeline()
+
+# Set up CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust this in production to specific domains
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # Initialize on startup
@@ -86,14 +96,19 @@ async def evaluate_route(req: EvaluationRequest):
     """
     results = {}
     # Convert list to set for ground truth
+    # print(req.ground_truth)
     gt_sets = {k: set(v) for k, v in req.ground_truth.items()}
 
+    # print(gt_sets)
     for query in req.ground_truth.keys():
+        # print(query)
+        # print(gt_sets[query])
         # Run search for each query
         # We use BM25 for now as the baseline
         search_res = search_bm25(query, top_k=req.top_k)
+        # print(search_res)
         results[query] = [r["doc_id"] for r in search_res]
-
+        print(results)
     metrics = evaluate_system(results, gt_sets, k=req.top_k)
     return metrics
 

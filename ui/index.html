@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>News Engine Dashboard</title>
+    <style>
+      /* --- CSS: FLAT DESIGN (No Gradients) --- */
+      :root {
+        --bg-color: #f4f4f5;
+        --card-bg: #ffffff;
+        --text-main: #18181b;
+        --text-muted: #71717a;
+        --border-color: #e4e4e7;
+        --primary: #2563eb; /* Solid Blue */
+        --primary-hover: #1d4ed8;
+        --accent: #f9fafb;
+        --success: #22c55e;
+        --warning: #eab308;
+        --danger: #ef4444;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        margin: 0;
+        padding: 0;
+        line-height: 1.5;
+      }
+
+      /* Header */
+      header {
+        background: var(--card-bg);
+        border-bottom: 1px solid var(--border-color);
+        padding: 1rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      h1 {
+        font-size: 1.25rem;
+        margin: 0;
+        font-weight: 700;
+      }
+
+      /* Search Controls */
+      .search-bar {
+        display: flex;
+        gap: 0.5rem;
+        max-width: 800px;
+        width: 100%;
+      }
+
+      select,
+      input,
+      button {
+        padding: 0.6rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 4px; /* Minimal radius */
+        font-size: 0.95rem;
+        outline: none;
+      }
+
+      input {
+        flex-grow: 1;
+      }
+
+      button {
+        background-color: var(--primary);
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      button:hover {
+        background-color: var(--primary-hover);
+      }
+
+      select {
+        background-color: white;
+        cursor: pointer;
+      }
+
+      /* Main Layout - Grid */
+      .container {
+        display: grid;
+        grid-template-columns: 1fr 400px; /* Split: Results | Context Sidebar */
+        gap: 2rem;
+        padding: 2rem;
+        max-width: 1600px;
+        margin: 0 auto;
+        height: calc(100vh - 90px); /* Full height minus header */
+      }
+
+      /* Scrollable Areas */
+      .results-column,
+      .sidebar-column {
+        overflow-y: auto;
+        padding-right: 1rem; /* Space for scrollbar */
+        height: 100%;
+      }
+
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+
+      /* Article Cards */
+      .card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        border-radius: 6px;
+        transition: border-color 0.2s;
+        cursor: pointer;
+      }
+
+      .card:hover {
+        border-color: var(--primary);
+      }
+      .card.active {
+        border-left: 5px solid var(--primary);
+      }
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+      }
+
+      .card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem 0;
+        color: var(--primary);
+        text-decoration: none;
+        display: block;
+      }
+
+      .card-snippet {
+        font-size: 0.9rem;
+        color: #374151;
+      }
+
+      /* Sidebar Modules */
+      .sidebar-section {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        margin-bottom: 1.5rem;
+        border-radius: 6px;
+      }
+
+      .sidebar-header {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        font-weight: 700;
+        font-size: 0.95rem;
+        background-color: var(--accent);
+      }
+
+      .sidebar-content {
+        padding: 1rem;
+      }
+
+      /* SEO Stats Grid */
+      .seo-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .seo-item {
+        border: 1px solid var(--border-color);
+        padding: 0.75rem;
+        border-radius: 4px;
+        text-align: center;
+      }
+      .seo-val {
+        display: block;
+        font-weight: bold;
+        font-size: 1.1rem;
+      }
+      .seo-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      /* Timeline Items */
+      .timeline-item {
+        position: relative;
+        padding-left: 1.5rem;
+        margin-bottom: 1.25rem;
+        border-left: 2px solid var(--border-color);
+      }
+      .timeline-item::before {
+        content: "";
+        position: absolute;
+        left: -5px;
+        top: 5px;
+        width: 8px;
+        height: 8px;
+        background: var(--text-muted);
+        border-radius: 50%;
+      }
+      .timeline-date {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+      .timeline-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+
+      /* RAG Answer Box */
+      .rag-box {
+        background: #eff6ff; /* Very light blue */
+        border: 1px solid #bfdbfe;
+        padding: 1.5rem;
+        border-radius: 6px;
+        margin-bottom: 2rem;
+      }
+      .rag-box h3 {
+        margin-top: 0;
+        font-size: 1.1rem;
+        color: var(--primary);
+      }
+      .rag-text {
+        white-space: pre-wrap;
+      }
+
+      /* Helpers */
+      .badge {
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        text-transform: uppercase;
+      }
+      .status-good {
+        color: var(--success);
+        background: #dcfce7;
+      }
+      .status-warning {
+        color: var(--warning);
+        background: #fef9c3;
+      }
+      .status-error {
+        color: var(--danger);
+        background: #fee2e2;
+      }
+
+      /* Placeholder State */
+      .empty-state {
+        text-align: center;
+        color: var(--text-muted);
+        margin-top: 3rem;
+      }
+
+      @media (max-width: 900px) {
+        .container {
+          grid-template-columns: 1fr;
+          height: auto;
+        }
+        .sidebar-column {
+          margin-top: 2rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-top">
+        <h1>News Engine</h1>
+      </div>
+      <div class="search-bar">
+        <select id="searchMode">
+          <option value="standard">Keyword Search</option>
+          <option value="semantic">Semantic Search</option>
+          <option value="rag">RAG (AI Answer)</option>
+        </select>
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Enter query (e.g., 'India Space Station')..."
+        />
+        <button onclick="handleSearch()">Search</button>
+      </div>
+    </header>
+
+    <div class="container">
+      <!-- LEFT COLUMN: Results -->
+      <div class="results-column" id="resultsCol">
+        <div class="empty-state">Enter a keyword to start searching.</div>
+      </div>
+
+      <!-- RIGHT COLUMN: Sidebar (Details) -->
+      <div class="sidebar-column" id="sidebarCol">
+        <div class="empty-state" id="sidebarPlaceholder">
+          Select an article to view SEO Analysis, Timeline, and Similar News.
+        </div>
+
+        <!-- Content gets injected here dynamically -->
+        <div id="sidebarContent" style="display: none">
+          <!-- SEO Section -->
+          <div class="sidebar-section">
+            <div class="sidebar-header">SEO Analysis</div>
+            <div class="sidebar-content" id="seoContainer">
+              <!-- Filled via JS -->
+            </div>
+          </div>
+
+          <!-- Timeline Section -->
+          <div class="sidebar-section">
+            <div class="sidebar-header">Event Timeline</div>
+            <div class="sidebar-content" id="timelineContainer">
+              <!-- Filled via JS -->
+            </div>
+          </div>
+
+          <!-- Similar Section -->
+          <div class="sidebar-section">
+            <div class="sidebar-header">Similar Articles</div>
+            <div class="sidebar-content" id="similarContainer">
+              <!-- Filled via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const BASE_URL = "http://localhost:8000";
+      const resultsCol = document.getElementById("resultsCol");
+      const sidebarContent = document.getElementById("sidebarContent");
+      const sidebarPlaceholder = document.getElementById("sidebarPlaceholder");
+
+      // 1. MAIN SEARCH HANDLER
+      async function handleSearch() {
+        const query = document.getElementById("searchInput").value;
+        const mode = document.getElementById("searchMode").value;
+
+        if (!query) return alert("Please enter a query");
+
+        resultsCol.innerHTML = '<div class="empty-state">Searching...</div>';
+        sidebarContent.style.display = "none";
+        sidebarPlaceholder.style.display = "block";
+
+        try {
+          let data;
+          if (mode === "rag") {
+            // RAG Endpoint
+            const res = await fetch(
+              `${BASE_URL}/rag/search?query=${encodeURIComponent(
+                query
+              )}&top_k=5`
+            );
+            data = await res.json();
+            renderRagResponse(data);
+          } else {
+            // Standard or Semantic Endpoint
+            const endpoint =
+              mode === "semantic" ? "/semantic_search" : "/search";
+            const res = await fetch(
+              `${BASE_URL}${endpoint}?q=${encodeURIComponent(query)}&top_k=10`
+            );
+            data = await res.json();
+            // Both standard and semantic seem to return { results: [...] } structure based on your prompt
+            // Note: Your semantic_search example schema showed empty {}, but standard search works.
+            // I'll assume they return similar structures.
+            renderList(data.results || []);
+          }
+        } catch (err) {
+          console.error(err);
+          resultsCol.innerHTML = `<div class="empty-state" style="color:red">Error fetching results.<br>${err.message}</div>`;
+        }
+      }
+
+      // 2. RENDER LIST (Standard/Semantic)
+      function renderList(results) {
+        if (!results || results.length === 0) {
+          resultsCol.innerHTML =
+            '<div class="empty-state">No results found.</div>';
+          return;
+        }
+
+        resultsCol.innerHTML = "";
+        results.forEach((item) => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.dataset.id = item.doc_id;
+          card.innerHTML = `
+                <div class="card-header">
+                    <span>${item.site}</span>
+                    <span>${item.date}</span>
+                </div>
+                <div class="card-title">${item.title}</div>
+                <div class="card-snippet">${item.snippet.substring(
+                  0,
+                  150
+                )}...</div>
+            `;
+
+          // Click Event to load sidebar
+          card.addEventListener("click", () => {
+            // Highlight active
+            document
+              .querySelectorAll(".card")
+              .forEach((c) => c.classList.remove("active"));
+            card.classList.add("active");
+            loadSidebar(item.doc_id);
+          });
+
+          resultsCol.appendChild(card);
+        });
+      }
+
+      // 3. RENDER RAG RESPONSE
+      function renderRagResponse(data) {
+        resultsCol.innerHTML = `
+            <div class="rag-box">
+                <h3>AI Summary</h3>
+                <div class="rag-text">${data.answer}</div>
+            </div>
+            <h4>Source Documents</h4>
+        `;
+        // Reuse list renderer for sources
+        const sourcesContainer = document.createElement("div");
+        resultsCol.appendChild(sourcesContainer);
+
+        // Render sources below answer
+        data.sources.forEach((item) => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+                <div class="card-header">
+                    <span>${item.site}</span>
+                    <span>Score: ${(item.score || 0).toFixed(2)}</span>
+                </div>
+                <div class="card-title">${item.title}</div>
+                <div class="card-snippet">${item.snippet}</div>
+            `;
+          card.onclick = () => {
+            document
+              .querySelectorAll(".card")
+              .forEach((c) => c.classList.remove("active"));
+            card.classList.add("active");
+            loadSidebar(item.doc_id);
+          };
+          sourcesContainer.appendChild(card);
+        });
+      }
+
+      // 4. LOAD SIDEBAR DETAILS
+      async function loadSidebar(docId) {
+        sidebarPlaceholder.style.display = "none";
+        sidebarContent.style.display = "block";
+
+        // Clear previous
+        document.getElementById("seoContainer").innerHTML =
+          "<p>Loading SEO...</p>";
+        document.getElementById("timelineContainer").innerHTML =
+          "<p>Loading Timeline...</p>";
+        document.getElementById("similarContainer").innerHTML =
+          "<p>Loading Similar...</p>";
+
+        // Fetch all concurrently
+        const [seoRes, timeRes, simRes] = await Promise.allSettled([
+          fetch(`${BASE_URL}/seo/analyze?doc_id=${docId}`),
+          fetch(`${BASE_URL}/timeline?doc_id=${docId}&top_k=5`),
+          fetch(`${BASE_URL}/similar?doc_id=${docId}&top_k=4`),
+        ]);
+
+        // Process SEO
+        if (seoRes.status === "fulfilled") {
+          const data = await seoRes.value.json();
+          renderSeo(data);
+        }
+
+        // Process Timeline
+        if (timeRes.status === "fulfilled") {
+          const data = await timeRes.value.json();
+          renderTimeline(data.timeline || []);
+        }
+
+        // Process Similar
+        if (simRes.status === "fulfilled") {
+          const data = await simRes.value.json();
+          renderSimilar(data.results || []);
+        }
+      }
+
+      function renderSeo(data) {
+        const container = document.getElementById("seoContainer");
+        if (!data.readability) {
+          container.innerHTML = "No SEO data";
+          return;
+        }
+
+        // Helper for status color
+        const getStatusClass = (status) => {
+          if (status === "good") return "status-good";
+          if (status === "warning") return "status-warning";
+          return "status-error";
+        };
+
+        container.innerHTML = `
+            <div class="seo-grid">
+                <div class="seo-item ${getStatusClass(
+                  data.readability.status
+                )}">
+                    <span class="seo-val">${data.readability.score}</span>
+                    <span class="seo-label">Readability</span>
+                </div>
+                <div class="seo-item ${getStatusClass(data.word_count.status)}">
+                    <span class="seo-val">${data.word_count.value}</span>
+                    <span class="seo-label">Words</span>
+                </div>
+                <div class="seo-item ${getStatusClass(
+                  data.title_length_check.status
+                )}">
+                    <span class="seo-val">${
+                      data.title_length_check.value
+                    }</span>
+                    <span class="seo-label">Title Len</span>
+                </div>
+                <div class="seo-item ${getStatusClass(
+                  data.keyword_prominence.status
+                )}">
+                    <span class="seo-val">${
+                      data.keyword_prominence.value
+                    }</span>
+                    <span class="seo-label">Keywords</span>
+                </div>
+            </div>
+            <div style="margin-top:10px; font-size:0.8rem; color:#666;">
+                ${data.keyword_prominence.message}
+            </div>
+        `;
+      }
+
+      function renderTimeline(timeline) {
+        const container = document.getElementById("timelineContainer");
+        if (!timeline.length) {
+          container.innerHTML = "<small>No timeline data found.</small>";
+          return;
+        }
+
+        container.innerHTML = timeline
+          .map(
+            (t) => `
+            <div class="timeline-item">
+                <div class="timeline-date">${
+                  t.date
+                } <span class="badge" style="background:#eee">${
+              t.label || "News"
+            }</span></div>
+                <div class="timeline-title">${t.title}</div>
+            </div>
+        `
+          )
+          .join("");
+      }
+
+      function renderSimilar(results) {
+        const container = document.getElementById("similarContainer");
+        if (!results.length) {
+          container.innerHTML = "<small>No similar articles.</small>";
+          return;
+        }
+
+        container.innerHTML = results
+          .map(
+            (r) => `
+            <div style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">
+                <div style="font-size:0.9rem; font-weight:600; color:#2563eb; cursor:pointer;" onclick="loadSidebar(${
+                  r.doc_id
+                })">
+                    ${r.title}
+                </div>
+                <div style="font-size:0.75rem; color:#888;">
+                    Similarity: ${(r.similarity * 100).toFixed(1)}%
+                </div>
+            </div>
+        `
+          )
+          .join("");
+      }
+    </script>
+  </body>
+</html>
