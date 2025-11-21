@@ -9,6 +9,7 @@ dependencies = [
     "datasets>=4.4.1",
     "duckdb>=1.4.2",
     "fastapi[standard]>=0.121.2",
+    "google-genai>=1.52.0",
     "rank-bm25>=0.2.2",
     "uvicorn>=0.38.0",
 ]
