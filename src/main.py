@@ -1,19 +1,23 @@
 import os
+from typing import Dict, List
 
 from fastapi import FastAPI, Query
+from pydantic import BaseModel
 
 from src.data_loader import load_and_clean
-from src.indexer import build_indices
+from src.evaluation import evaluate_system
+from src.indexer import build_indices, load_indices
 from src.models import SearchResponse, SearchResult
+from src.rag.rag_pipeline import RAGPipeline
 from src.search import search_bm25
-
 from src.semantic.semantic_search import semantic_search
 from src.semantic.similarity import similar_articles
 from src.semantic.timeline import build_story_timeline
-from src.rag.rag_pipeline import RAGPipeline
+from src.seo import analyze_seo
 
 app = FastAPI(title="News Search Engine")
 rag = RAGPipeline()
+
 
 # Initialize on startup
 @app.on_event("startup")
@@ -40,20 +44,15 @@ async def search(
         results=[SearchResult(**r) for r in results],
     )
 
+
 @app.get("/semantic_search")
 async def semantic_route(q: str, top_k: int = 10):
-    return {
-        "query": q,
-        "results": semantic_search(q, top_k)
-    }
+    return {"query": q, "results": semantic_search(q, top_k)}
 
 
 @app.get("/similar")
 async def similar_route(doc_id: int, top_k: int = 5):
-    return {
-        "doc_id": doc_id,
-        "results": similar_articles(doc_id, top_k)
-    }
+    return {"doc_id": doc_id, "results": similar_articles(doc_id, top_k)}
 
 
 @app.get("/timeline")
@@ -73,3 +72,45 @@ def rag_search(query: str, top_k: int = 5):
     Semantic retrieval + Gemini summarization
     """
     return rag.run(query, top_k)
+
+
+class EvaluationRequest(BaseModel):
+    ground_truth: Dict[str, List[int]]
+    top_k: int = 10
+
+
+@app.post("/evaluate")
+async def evaluate_route(req: EvaluationRequest):
+    """
+    Run evaluation metrics on the provided ground truth.
+    """
+    results = {}
+    # Convert list to set for ground truth
+    gt_sets = {k: set(v) for k, v in req.ground_truth.items()}
+
+    for query in req.ground_truth.keys():
+        # Run search for each query
+        # We use BM25 for now as the baseline
+        search_res = search_bm25(query, top_k=req.top_k)
+        results[query] = [r["doc_id"] for r in search_res]
+
+    metrics = evaluate_system(results, gt_sets, k=req.top_k)
+    return metrics
+
+
+@app.get("/seo/analyze")
+async def seo_route(doc_id: int):
+    """
+    Analyze SEO factors for a specific document.
+    """
+    _, _, doc_map = load_indices()
+    if doc_id not in doc_map:
+        return {"error": "Document not found"}
+
+    doc = doc_map[doc_id]
+    # doc structure: (doc_id, title, body, site, date)
+
+    title = doc[1]
+    body = doc[2]
+
+    return analyze_seo(title, body)
